@@ -85,7 +85,7 @@ class Controller():
     def set_pixel_col(self,pixel_number,new_col):
         if self.client.pixels[pixel_number] != new_col:
             self.client.pixels[pixel_number] = new_col
-            self.client.need_redraw = True
+            self.client.controls_active = True
         
     def draw_cursor(self):
         for config in self.configs:
@@ -162,6 +162,7 @@ class Controller():
     def button_up(self):
         pass
 
+
 class SerialController(Controller):
     
     def __init__(self, client, name, encoder_pin1, encoder_pin2, pulses_rev,
@@ -182,76 +183,48 @@ class SerialController(Controller):
             print("Sending to serial:", send_buffer)
             self.client.serial_port.write(send_buffer)
 
+class PixelManager():
+    def __init__(self, pixels, pixel_no):
+        self.pixel_no = pixel_no
+        self.col = [0,0,0]
+        self.deltas = [0,0,0]
+        self.current_step=0
+        self.no_of_steps=0
+    
+    def set_col(self,new_col):
+        for i in range(0,3):
+            self.col[i]=new_col[i]
+
+    def update(self):
+        if self.current_step < self.no_of_steps:
+            for i in range(0,3):
+                c = self.col[i] + self.deltas[i]
+                if c<0:
+                    c=0
+                if c>255:
+                    c=255
+                self.col[i]=c
+            self.current_step = self.current_step + 1
+
+    def draw(self, pixels):
+        pixels[self.pixel_no] = self.col
+
+    def start_fade(self,target_col,no_of_steps):
+        self.current_step = 0
+        self.no_of_steps = no_of_steps
+        if no_of_steps == 0:
+            self.set_col(target_col)
+        else:
+            for i in range(0,3):
+                self.deltas[i] = (target_col[i] - self.col[i]) / no_of_steps
+        
 class ScreenCommand():
 
-    def make_buffer(self):
-        result = []
-        for i in range(0,self.pixels.n):
-            pixel = [0,0,0]
-            result.append(pixel)
-        return result
-
-    def add_delta(self, dest_pixels, col_deltas):
-        pos=0
-        for pos in range(dest_pixels.n):
-            delta = col_deltas[pos]
-            r = dest_pixels[pos][0] + delta[0]
-            if r>255:
-                r=255
-            if r<0:
-                r=0
-
-            g = dest_pixels[pos][1] + delta[1]
-            if g>255:
-                g=255
-            if g<0:
-                g=0
-
-            b =dest_pixels[pos][2] + delta[2]
-            if b>255:
-                b=255
-            if g<0:
-                b=0
-            dest_pixels[pos]=(r,g,b)
-
-    def get_delta(self, pixel, target_col, no_of_steps ):
-        self.current_step = 0
-        r = target_col[0]
-        g = target_col[1]
-        b = target_col[2]
-        r_delta = (r - pixel[0]) / no_of_steps
-        g_delta = (g - pixel[1]) / no_of_steps
-        b_delta = (b - pixel[2]) / no_of_steps
-        return (r_delta, g_delta, b_delta)
-
-    def set_deltas(self, dest_pixels, target_col, no_of_steps ):
-        self.current_step = 0
-        if no_of_steps == 0:
-            self.pixels.fill(target_col)
-            self.command_changed_display = True
-        else:
-            r = target_col[0]
-            g = target_col[1]
-            b = target_col[2]
-            pos=0
-            for pixel in self.pixels:
-                dest = dest_pixels[pos]
-                r_delta = (r - pixel[0]) / no_of_steps
-                g_delta = (g - pixel[1]) / no_of_steps
-                b_delta = (b - pixel[2]) / no_of_steps
-                dest[0] = r_delta
-                dest[1] = g_delta
-                dest[2] = b_delta
-                pos = pos + 1
-
     def get_pixel_offset(self,x,y):
-        return y+self.width + x
+        return y*controller.panel_width + x
 
     def __init__(self, controller):
         self.controller = controller
-        self.pixels = controller.pixels
-        self.width = controller.panel_width
-        self.height = controller.panel_height
  
     def process_command(self):
         input_buffer = self.controller.packet_input_buffer
@@ -266,11 +239,6 @@ class ScreenCommand():
                 input_buffer[pos] = self.defaults[pos]
             # update the new length
             self.controller.packet_buffer_pos = default_length
-
-        pass
-
-    def update_command(self):
-        pass
 
 # Fills a screen with the specified colour
 class C_1_FillScreen(ScreenCommand):
@@ -289,9 +257,10 @@ class C_1_FillScreen(ScreenCommand):
         b = input_buffer[3]
         print("1 Setting panel colour r:",r," g:",g," b;",b)
         target = (r,g,b)
-        self.pixels.fill(target)
-        self.controller.need_redraw = True
-        
+
+        for pixel in self.controller.pixel_managers:
+            pixel.set_col(target)
+
 # Fills a screen with the specified colour
 class C_2_FadeScreen(ScreenCommand):
 
@@ -300,7 +269,6 @@ class C_2_FadeScreen(ScreenCommand):
         # default colour values
         #               command   r  g  b  ticks to complete
         self.defaults = [1,       0, 0, 0, 5 ]
-        self.fade_step_buffer = self.make_buffer()
         self.current_step=0
         self.no_of_steps=0
 
@@ -310,20 +278,10 @@ class C_2_FadeScreen(ScreenCommand):
         r = input_buffer[1]
         g = input_buffer[2]
         b = input_buffer[3]
-        steps = input_buffer[4]
         target = (r,g,b)
-        self.set_deltas(self.fade_step_buffer,target,steps)
-        self.current_step = 0
-        self.no_of_steps = steps
-
-    def update_command(self):
-        # Updates a fade
-        super(C_2_FadeScreen,self).update_command()
-        if self.current_step < self.no_of_steps:
-            self.add_delta(self.pixels,self.fade_step_buffer)
-            self.current_step = self.current_step + 1
-            self.controller.need_redraw = True
-            return
+        steps = input_buffer[4]
+        for pixel in self.controller.pixel_managers:
+            pixel.start_fade(target, steps)
 
 # Draw a dot at a position on the screen 
 class C_3_Drawdots(ScreenCommand):
@@ -333,54 +291,64 @@ class C_3_Drawdots(ScreenCommand):
         # default colour values
         #                command  r  g  b  ticks to complete x1 y1 x2 y2 ... xn yn
         self.defaults = [1,       0, 0, 0, 5,                0,  0 ]
-        self.fade_step_buffer = self.make_buffer()
         self.current_step=0
         self.no_of_steps=0
 
     def process_command(self):
         super(C_3_Drawdots,self).process_command()
-        self.populate_command_bytes(defaults)
         input_buffer = self.controller.packet_input_buffer
         r = input_buffer[1]
         g = input_buffer[2]
         b = input_buffer[3]
+        target = (r,g,b)
         steps = input_buffer[4]
         # now got a succession of x,y values that specify the dots to be drawn
         # work through these and add delta values for each of the pixels
         # need to clear the delta panel first of course.....
         # then the update will be just the same as for the fadescreen
+        limit = self.controller.packet_buffer_pos
+        pos = 5
+        while pos < limit:
+            x = input_buffer[pos]
+            pos = pos + 1
+            if pos == limit:
+                break
+            y = input_buffer[pos]
+            pix_no = self.get_pixel_offset(x,y)
+            self.controller.pixel_managers[pix_no].start_fade(target,steps)
+            pos = pos + 1
 
+# Draw a block at a position on the screen 
+class C_4_DrawBlock(ScreenCommand):
 
-
-        super(C_3_Drawdots,self).process_command()
+    def __init__(self,controller):
+        super(C_4_DrawBlock,self).__init__(controller)
         # default colour values
-        #           command  r  g  b  ticks to complete x y
-        defaults = [1,       0, 0, 0, 5,               0, 0 ]
-        self.populate_command_bytes(defaults)
-        r = defaults[1]
-        g = defaults[2]
-        b = defaults[3]
-        steps = defaults[4]
-        print("Setting a pixel: ", defaults)
+        #                command  r  g  b  ticks to complete x   y  w   h
+        self.defaults = [1,       0, 0, 0, 5,                0,  0, 2,  2 ]
+        self.current_step=0
+        self.no_of_steps=0
+
+    def process_command(self):
+        super(C_4_DrawBlock,self).process_command()
+        input_buffer = self.controller.packet_input_buffer
+        r = input_buffer[1]
+        g = input_buffer[2]
+        b = input_buffer[3]
+        steps = input_buffer[4]
+        x = input_buffer[5]
+        y = input_buffer[6]
+        w = input_buffer[7]
+        h = input_buffer[8]
         target = (r,g,b)
-        pixel = self.pixels[self.get_pixel_offset(x,y)]
-        self.fade_step_color = self.get_delta(self.fade_step_buffer,target,steps)
-        self.current_step = 0
-        self.no_of_steps = steps
-
-    def update_command(self):
-        # Updates a draw
-        super(C_3_Drawdots,self).update_command()
-        if self.current_step < self.no_of_steps:
-            self.add_delta(self.pixels,self.fade_step_buffer)
-            self.current_step = self.current_step + 1
-            self.controller.need_redraw = True
-            return
-
-class ScreenManager():
-
-    def __init__(self):
-        print("Rob Miles Chocolate Synthbox Screen Manager 1.0")
+        for yp in range(0,h):
+            fy = y + yp
+            if fy < controller.panel_height:
+                for xp in range (0,w):
+                    fx = x + xp
+                    if fx < controller.panel_width:
+                        pix_no = self.get_pixel_offset(fx,fy)
+                        self.controller.pixel_managers[pix_no].start_fade(target,steps) 
 
 class DisplayController():
     def __init__(self):
@@ -409,15 +377,9 @@ class DisplayController():
                            button_pin=board.GP17, forward=False,  configs=c2)
             ]
 
-        no_of_pixels = 64
-        self.panel_width = 8
-        self.panel_height = 8
-        self.pixels = neopixel.NeoPixel(board.GP18,no_of_pixels,auto_write=False)
-        self.pixels.brightness = 0.3
-        self.need_redraw = False
+        self.setup_display_manager(board.GP18,8,8)
+
         self.setup_command_input()
-        self.update_interval = 0.02
-        self.next_update_time = time.monotonic() + self.update_interval
 
     def button_down(self,controller):
         pass
@@ -427,6 +389,20 @@ class DisplayController():
 
     def encoder_changed(self, controller, change):
         pass
+
+    def setup_display_manager(self, gpio, width,height):
+        self.panel_width = width
+        self.panel_height = height
+        no_of_pixels = width*height
+        self.pixels = neopixel.NeoPixel(gpio,no_of_pixels,auto_write=False)
+        self.pixel_managers = []
+        for i in range(0,no_of_pixels):
+            self.pixel_managers.append(PixelManager(self.pixels,i))
+        self.pixels.brightness = 0.3
+        self.update_interval = 0.02
+        self.controls_active = True
+        self.next_update_time = time.monotonic() + self.update_interval
+        self.control_display_end_time = time.monotonic() + 2
 
     AWAITING_START = 1
     READING_DATA = 2
@@ -440,7 +416,9 @@ class DisplayController():
         # setup the command decoder
         self.command_processors = [
             C_1_FillScreen(self), 
-            C_2_FadeScreen(self)   
+            C_2_FadeScreen(self),
+            C_3_Drawdots(self),
+            C_4_DrawBlock(self)   
         ]
 
         # build the fixed length packet input buffer
@@ -484,25 +462,35 @@ class DisplayController():
             self.process_incoming_byte(b)
 
     def update(self):
-        self.need_redraw = False
+
+        current_time = time.monotonic()
+
+        self.controls_active == False
+
         for controller in self.controllers:
             controller.update()
+
+        if self.controls_active:
+            print("Controls active")
+            self.controls_active = False
+            self.control_display_end_time = current_time + 2
 
         incoming_bytes = self.serial_port.in_waiting
         if incoming_bytes != 0:
             serial_bytes = self.serial_port.read(incoming_bytes)
             self.process_incoming_bytes(serial_bytes)
 
-        current_time = time.monotonic()
-
         if current_time >= self.next_update_time:
             self.next_update_time = current_time + self.update_interval
-            for command in self.command_processors:
-                command.update_command()
-            if self.need_redraw:
-                self.pixels.show()
-                self.pixels.show()
-                self.need_redraw = False
+
+            for pixel in self.pixel_managers:
+                pixel.update()
+
+            if current_time > self.control_display_end_time :
+                for pixel in self.pixel_managers:
+                    pixel.draw(self.pixels)
+
+            self.pixels.show()
 
 controller = DisplayController()
 
