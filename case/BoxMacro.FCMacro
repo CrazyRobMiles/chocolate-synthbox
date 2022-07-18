@@ -3210,6 +3210,81 @@ class NeoPixel8x8LidLightPipe(PillarSupportedDevice):
 
         return tray
 
+
+class SmallNeoPixel8x8LidLightPipe(PillarSupportedDevice):
+
+
+    def __init__(self, partName, 
+                orientation=Orientation.LANDSCAPE,
+                xMargin=0.5, yMargin=0.5, 
+                pillarType=PillarType.DEFAULT,scrunchX=0,scrunchY=0,
+                pillarRadius=2.5,pillarHeight=6,holeRadius=1,
+                innerGridXOffset=5, innerGridYOffset=15,
+                verticalAlignment=VerticalAlignment.CENTRE, horizontalAlignment=HorizontalAlignment.CENTRE,
+                grid=[]):
+
+        super(SmallNeoPixel8x8LidLightPipe,self).__init__("SmallNeoPixel8x8LidLightPipe",partName, 75,75,
+                                            verticalAlignment=verticalAlignment, horizontalAlignment=horizontalAlignment,
+                                            xMargin=xMargin,yMargin=yMargin,
+                                            pillarType=pillarType,scrunchX=scrunchX,scrunchY=scrunchY,
+                                            pillarRadius=pillarRadius,pillarHeight=pillarHeight,holeRadius=1,
+                                            holeCounterSinkDepth=1.0,holeCounterSinkRadius=3.0,
+                                            innerGridXOffset=innerGridXOffset,innerGridYOffset=innerGridYOffset,
+                                            grid=grid )
+
+        self.xPixels=8
+        self.yPixels=8
+        self.boardWidth = 65.0
+        self.boardHeight = 65.0
+
+    holeXSpacing = 35.16/2.0
+    holeYSpacing = 70.0
+
+    def placeComponent(self,x,y,tray,baseDepth):
+
+        bottomX=x + (self.width-self.boardWidth)/2.0
+        bottomY=y  + (self.height-self.boardHeight)/2.0
+        xledSpacing =  self.boardWidth/self.xPixels
+        yledSpacing =  self.boardHeight/self.yPixels
+        ledPipeThickness=1.0
+        ledHeight=6
+        diffuserHeight=0.8
+        if xledSpacing<yledSpacing:
+            ledPipeOuterDiam=xledSpacing
+        else:
+            ledPipeOuterDiam=yledSpacing
+        for i in range(self.xPixels):
+            for j in range(self.yPixels):
+                    xp = bottomX + i * xledSpacing+(xledSpacing/2.0)
+                    yp = bottomY + j * yledSpacing+(yledSpacing/2.0)
+                    outerPipePos = Base.Vector(xp, yp, 0)
+                    outerPipe = Part.makeCylinder(ledPipeOuterDiam/2.0, ledHeight,outerPipePos)
+                    tray = tray.fuse(outerPipe)
+                    cutoutZ = -baseDepth+diffuserHeight
+                    cutoutPos = Base.Vector(xp, yp, cutoutZ)
+                    cutoutHeight = ledHeight+(baseDepth-diffuserHeight)
+                    cutOut = Part.makeCylinder((ledPipeOuterDiam/2.0)-(ledPipeThickness/2.0), cutoutHeight,cutoutPos)
+                    tray = tray.cut(cutOut)
+
+# Top Row
+        bottomLeftHoleX = bottomX + (self.boardWidth/2 - self.holeXSpacing)
+        bottomLeftHoleY = bottomY + ((self.boardHeight-self.holeYSpacing)/2)
+        tray=self.addPillar(tray,bottomLeftHoleX,bottomLeftHoleY,baseDepth)
+        bottomLeftHoleX = bottomX + (self.boardWidth/2)
+        tray=self.addPillar(tray,bottomLeftHoleX,bottomLeftHoleY,baseDepth)
+        bottomLeftHoleX = bottomX + (self.boardWidth/2 + self.holeXSpacing)
+        tray=self.addPillar(tray,bottomLeftHoleX,bottomLeftHoleY,baseDepth)
+# Bottom Row
+        bottomLeftHoleY = bottomLeftHoleY+self.holeYSpacing
+        bottomLeftHoleX = bottomX + (self.boardWidth/2 - self.holeXSpacing)
+        tray=self.addPillar(tray,bottomLeftHoleX,bottomLeftHoleY,baseDepth)
+        bottomLeftHoleX = bottomX + (self.boardWidth/2)
+        tray=self.addPillar(tray,bottomLeftHoleX,bottomLeftHoleY,baseDepth)
+        bottomLeftHoleX = bottomX + (self.boardWidth/2 + self.holeXSpacing)
+        tray=self.addPillar(tray,bottomLeftHoleX,bottomLeftHoleY,baseDepth)
+
+        return tray
+
 class PI4Landscape(PillarSupportedDevice):
 
     boardHeight = 89.0
@@ -3230,8 +3305,6 @@ class PI4Landscape(PillarSupportedDevice):
     simSlotWidth = 13.0
     simSlotHeight = 8.0
     simSlotDepth=20.0
-
-
 
     def __init__(self, partName, 
                 orientation=Orientation.PORTRAIT,
@@ -3281,6 +3354,80 @@ class PI4Landscape(PillarSupportedDevice):
         dummy = dummy.fuse(simslot)
         return dummy
 
+class MicroswitchKeyBoard(Device):
+
+    board_width = 8.0
+    board_height = 25.0
+    switch_width = 6.5
+    switch_depth = 13.0
+    switch_height = 6.0
+    outer_block_height = switch_height+1.0
+    switch_wall_thickness=0.75
+    pin_spacing = 5.0
+    pin_size = 0.6
+    leaf_angle = 20.0
+    leaf_length = 20.0
+    leaf_width = 4.5
+    button_hole_width = 6.0
+    button_hole_depth = 23.0
+    button_hole_y_offset = 1
+    switch_block_y_offset = 2
+
+    def __init__(self, id,scrunchX=0,scrunchY=0, noOfKeys=8, targetWidth=65.0):
+        super(MicroswitchKeyBoard,self).__init__("MicroswitchKey", id,  self.board_width,self.board_height,scrunchX=scrunchX,scrunchY=scrunchY)
+        self.noOfKeys = noOfKeys
+        self.width = targetWidth
+
+    def placeComponent(self,x,y,tray,baseDepth):
+        outer_width = self.switch_width + (2*self.switch_wall_thickness)
+        outer_depth = self.switch_depth + (2*self.switch_wall_thickness)
+        outer_height = self.switch_height + self.switch_wall_thickness
+#
+        key_x_spacing = self.width / self.noOfKeys
+        if key_x_spacing < outer_width:
+            raise Exception("Microswitch key: insufficient room for key")
+#
+        bottomX=x+self.xMargin+(key_x_spacing/2.0)
+        bottomY=y+self.yMargin
+#
+# Make the switch holder body
+        outerBlock= Part.makeBox(outer_width,outer_depth,outer_height+baseDepth)
+        switchBlock= Part.makeBox( self.switch_width,self.switch_depth,self.switch_height,Base.Vector(self.switch_wall_thickness,self.switch_wall_thickness,0))
+        pin_hole_x = self.switch_wall_thickness+(self.switch_width /2.0)
+        pin_hole_y = self.switch_wall_thickness+(self.switch_depth /2.0)
+        pin_hole = Part.makeCylinder(1.5,100,Base.Vector(pin_hole_x,pin_hole_y,0), Base.Vector(0,0,1))
+        switchBlock = switchBlock.fuse(pin_hole)
+        pin_hole.translate(Base.Vector(0,self.pin_spacing,0))
+        switchBlock = switchBlock.fuse(pin_hole)
+        pin_hole.translate(Base.Vector(0,-(self.pin_spacing*2),0))
+        switchBlock = switchBlock.fuse(pin_hole)
+        key_switch = outerBlock.cut(switchBlock)
+        key_switch.rotate(Base.Vector(0,0,0),Base.Vector(1,0,0),self.leaf_angle)
+        key_switch.translate(Base.Vector(0,0,-baseDepth))
+        switch_hole_x = bottomX 
+        switch_hole_y = bottomY + (self.button_hole_y_offset)
+        switch_hole_pos = Base.Vector(switch_hole_x, switch_hole_y, 0)
+        switch_hole = Part.makeBox(self.button_hole_width,self.button_hole_depth,baseDepth,switch_hole_pos)
+        key_spacing = self.width / self.noOfKeys
+        for key_no in range(0,self.noOfKeys):
+	        tray = tray.fuse(key_switch)
+	        tray = tray.cut(switch_hole)
+	        key_switch.translate(Base.Vector(key_spacing,0,0))   
+	        switch_hole.translate(Base.Vector(key_spacing,0,0) )
+        base_clean = Part.makeBox(self.width,self.board_height,20,Base.Vector(bottomX,bottomY,-20))
+        tray = tray.cut(base_clean)
+        return tray
+
+
+def KeyTest():
+    key = MicroswitchKeyBoard("key","key")
+    baseDepth = 3.0
+    tray = Part.makeBox(key.width+2,key.height+2,baseDepth)
+    tray = key.placeComponent(1,1,tray,baseDepth)
+    Part.show(tray)
+    Gui.SendMsgToActiveView("ViewFit")
+    Gui.activeDocument().activeView().viewAxometric()
+
 def SoundBox():
     proc = PI4Landscape("Pi4",verticalAlignment=VerticalAlignment.TOP, horizontalAlignment=HorizontalAlignment.LEFT,xMargin=0, yMargin=0)
     pico1 = PICO("Pico",verticalAlignment=VerticalAlignment.TOP, horizontalAlignment=HorizontalAlignment.CENTRE,xMargin=0, yMargin=2)
@@ -3322,6 +3469,34 @@ def SoundBox():
     Gui.SendMsgToActiveView("ViewFit")
     Gui.activeDocument().activeView().viewAxometric()
 
+
+def SpeakerBox():
+    leftSpeaker = SmallSpeaker("left speaker",xMargin=1, yMargin=1)
+    rightSpeaker = SmallSpeaker("right speaker",xMargin=1, yMargin=1)
+    indentSize = 10
+    midGapSize = 10
+    leftIndent = Device("blank", "blank",indentSize, indentSize)
+    rightIndent = Device("blank", "blank",indentSize, indentSize)
+    midGap = Device("blank", "blank",midGapSize, midGapSize)
+    base_side_height=25.0
+    case = Case(wall_thickness=3.0,base_side_height=base_side_height,base_thickness=3.0,lid_side_height=5,shape=CaseShapeType.MUSICBOX)
+    case.makeParts([],[[leftIndent,leftSpeaker,midGap,rightSpeaker,rightIndent]])
+    holeHeight=14.0
+    holePos = Base.Vector((case.width-holeHeight)/2.0,-case.wall_thickness,-3.0)
+    hole = Part.makeBox(holeHeight,case.wall_thickness+2,11,holePos)
+    case.baseDesign = case.baseDesign.cut(hole)
+# power connector hole
+    cableHolePos = Base.Vector(case.width-20,-3,10)
+    hole = Part.makeCylinder(4.0,4,cableHolePos, Base.Vector(0,1,0))
+    case.baseDesign = case.baseDesign.cut(hole)
+    case.show()
+
+    Gui.SendMsgToActiveView("ViewFit")
+    Gui.activeDocument().activeView().viewAxometric()
+
+
+
+
 def clamp():
     clampWidth=10
     clampDepth=12
@@ -3351,7 +3526,6 @@ def clamp():
     Gui.SendMsgToActiveView("ViewFit")
     Gui.activeDocument().activeView().viewAxometric()
 
-
 def SoundLightPad():
     proc = PICO("Pico",verticalAlignment=VerticalAlignment.TOP, horizontalAlignment=HorizontalAlignment.CENTRE,xMargin=0, yMargin=2)
     procHolder = Device("blank", "blank", 20, 5,grid=[[proc]])
@@ -3369,7 +3543,7 @@ def SoundLightPad():
     rightPanel = Device("Right panel", "right panel", 2, 2,grid=[[rightPushdown],[rightPotHolder]])
     ledPanel = NeoPixel8x8LidLightPipe("neopixel8x8panel",xMargin=2, yMargin=2)
     dispHolder =  Device("Display holder", "display holder", 2, 2,grid=[[ledPanel]]) 
-    base_side_height=20.0
+    base_side_height=28.0
     case = Case(wall_thickness=3.0,base_side_height=base_side_height,base_thickness=3.0, lid_thickness=3.0,lid_side_height=5,shape=CaseShapeType.MUSICBOX)
     case.makeParts([[procHolder]], [[dispHolder]])# ]) #,  [[leftPanel,dispHolder,rightPanel]] ])
     holeHeight=14.0
@@ -3404,7 +3578,98 @@ def SoundLightPadControls():
     case.baseDesign = case.baseDesign.cut(hole)
     case.show()
 
+def SmallSoundLightPadControls():
+    proc = PICO("Pico",verticalAlignment=VerticalAlignment.TOP, horizontalAlignment=HorizontalAlignment.CENTRE,xMargin=0, yMargin=2)
+    procHolder = Device("blank", "blank", 20, 5,grid=[[proc]])
 
+    leftPot = RotaryPot("left pot",xMargin=2,horizontalAlignment=HorizontalAlignment.CENTRE)
+    indentSize = 0
+    leftIndent = Device("blank", "blank",indentSize, indentSize)
+    leftPotHolder = Device("Left pot holder", "Left pot holder", 0, 0,grid=[[leftIndent,leftPot]],horizontalAlignment=HorizontalAlignment.CENTRE)
+    rightPot = RotaryPot("right pot",xMargin=2,horizontalAlignment=HorizontalAlignment.CENTRE)
+    rightIndent = Device("blank", "blank",indentSize, indentSize)
+    rightPotHolder = Device("Left pot holder", "Left pot holder", 0, 0,grid=[[rightIndent,rightPot]],horizontalAlignment=HorizontalAlignment.CENTRE)
+    leftPushdown = Device("blank", "blank",indentSize, indentSize)
+    leftPanel = Device("Left panel", "left panel", 2, 2,grid=[[leftPushdown],[leftPotHolder]])
+    rightPushdown = Device("blank", "blank",indentSize, indentSize)
+    rightPanel = Device("Right panel", "right panel", 2, 2,grid=[[rightPushdown],[rightPotHolder]])
+    ledPanel = SmallNeoPixel8x8LidLightPipe("neopixel8x8panel",xMargin=2, yMargin=2)
+    dispHolder =  Device("Display holder", "display holder", 2, 2,grid=[[ledPanel]]) 
+    base_side_height=20.0
+    case = Case(wall_thickness=3.0,base_side_height=base_side_height,base_thickness=3.0, lid_thickness=3.0,lid_side_height=5,shape=CaseShapeType.MUSICBOX)
+    case.makeParts([[procHolder]], [ [leftPot,dispHolder,rightPot] ])
+    holeHeight=14.0
+    holePos = Base.Vector((case.width-holeHeight)/2.0,-case.wall_thickness,-3.0)
+    hole = Part.makeBox(holeHeight,case.wall_thickness+2,11,holePos)
+    case.baseDesign = case.baseDesign.cut(hole)
+    case.show()
+
+
+def SmallSoundLightPadControlsKeyboard():
+    proc = PICO("Pico",verticalAlignment=VerticalAlignment.TOP, horizontalAlignment=HorizontalAlignment.CENTRE,xMargin=0, yMargin=2)
+    procHolder = Device("blank", "blank", 20, 5,grid=[[proc]])
+
+    leftPot = RotaryPot("left pot",xMargin=2,horizontalAlignment=HorizontalAlignment.CENTRE)
+    indentSize = 0
+    leftIndent = Device("blank", "blank",indentSize, indentSize)
+    leftPotHolder = Device("Left pot holder", "Left pot holder", 0, 0,grid=[[leftIndent,leftPot]],horizontalAlignment=HorizontalAlignment.CENTRE)
+    rightPot = RotaryPot("right pot",xMargin=2,horizontalAlignment=HorizontalAlignment.CENTRE)
+    rightIndent = Device("blank", "blank",indentSize, indentSize)
+    rightPotHolder = Device("Left pot holder", "Left pot holder", 0, 0,grid=[[rightIndent,rightPot]],horizontalAlignment=HorizontalAlignment.CENTRE)
+    leftPushdown = Device("blank", "blank",indentSize, indentSize)
+    leftPanel = Device("Left panel", "left panel", 2, 2,grid=[[leftPushdown],[leftPotHolder]])
+    rightPushdown = Device("blank", "blank",indentSize, indentSize)
+    rightPanel = Device("Right panel", "right panel", 2, 2,grid=[[rightPushdown],[rightPotHolder]])
+    ledPanel = SmallNeoPixel8x8LidLightPipe("neopixel8x8panel",xMargin=2, yMargin=2)
+    dispHolder =  Device("Display holder", "display holder", 2, 2,grid=[[ledPanel]]) 
+    base_side_height=20.0
+    case = Case(wall_thickness=3.0,base_side_height=base_side_height,base_thickness=3.0, lid_thickness=3.0,lid_side_height=5,shape=CaseShapeType.MUSICBOX)
+    case.makeParts([[procHolder]], [ [leftPot,dispHolder,rightPot] ])
+    holeHeight=14.0
+    holePos = Base.Vector((case.width-holeHeight)/2.0,-case.wall_thickness,-3.0)
+    hole = Part.makeBox(holeHeight,case.wall_thickness+2,11,holePos)
+    case.baseDesign = case.baseDesign.cut(hole)
+    case.show()
+
+def SoundBoxSmallscreen():
+    proc = PI4Landscape("Pi4",verticalAlignment=VerticalAlignment.TOP, horizontalAlignment=HorizontalAlignment.LEFT,xMargin=0, yMargin=0)
+    pico1 = PICO("Pico",verticalAlignment=VerticalAlignment.TOP, horizontalAlignment=HorizontalAlignment.CENTRE,xMargin=0, yMargin=2)
+    pico2 = PICO("Pico",verticalAlignment=VerticalAlignment.TOP, horizontalAlignment=HorizontalAlignment.CENTRE,xMargin=0, yMargin=2)
+    picoPush = Device("blank", "blank",pico1.width, 5)
+    procHolder = Device("Pi holder", "Pi holder", 5, 5,grid=[[proc]])
+    leftSpeaker = SmallSpeaker("left speaker",xMargin=1, yMargin=1)
+    rightSpeaker = SmallSpeaker("right speaker",xMargin=1, yMargin=1)
+    leftPot = RotaryPot("left pot",xMargin=2,horizontalAlignment=HorizontalAlignment.CENTRE)
+    indentSize = (leftSpeaker.width-leftPot.width)/2
+    leftIndent = Device("blank", "blank",indentSize, indentSize)
+    leftPotHolder = Device("Left pot holder", "Left pot holder", 0, 0,grid=[[leftIndent,leftPot]],horizontalAlignment=HorizontalAlignment.CENTRE)
+    rightPot = RotaryPot("right pot",xMargin=2,horizontalAlignment=HorizontalAlignment.CENTRE)
+    rightIndent = Device("blank", "blank",indentSize, indentSize)
+    rightPotHolder = Device("Left pot holder", "Left pot holder", 0, 0,grid=[[rightIndent,rightPot]],horizontalAlignment=HorizontalAlignment.CENTRE)
+    leftPushdown = Device("blank", "blank",indentSize, indentSize)
+    leftPanel = Device("Left panel", "left panel", 2, 2,grid=[[leftSpeaker],[leftPushdown],[leftPotHolder]])
+    rightPushdown = Device("blank", "blank",indentSize, indentSize)
+    rightPanel = Device("Right panel", "right panel", 2, 2,grid=[[rightSpeaker],[rightPushdown],[rightPotHolder]])
+    ledPanel = SmallNeoPixel8x8LidLightPipe("neopixel8x8panel",xMargin=2, yMargin=2)
+    dispHolder =  Device("Display holder", "display holder", 2, 2,grid=[[ledPanel]]) 
+    base_side_height=45.0
+    case = Case(wall_thickness=3.0,base_side_height=base_side_height,base_thickness=3.0,lid_side_height=5,shape=CaseShapeType.MUSICBOX)
+    case.makeParts([[picoPush,procHolder,pico2]],[[leftPanel,dispHolder,rightPanel]])
+    holeHeight=14.0
+    holePos = Base.Vector((case.width-holeHeight)/2.0,-case.wall_thickness,-3.0)
+    hole = Part.makeBox(holeHeight,case.wall_thickness+2,11,holePos)
+#    case.baseDesign = case.baseDesign.cut(hole)
+    dummy = proc.makeDummy()
+    dummy.translate(Base.Vector(58.5,1.5,4))
+    case.baseDesign = case.baseDesign.cut(dummy)
+# power connector
+    cableHolePos = Base.Vector(case.width-20,-3,10)
+    hole = Part.makeCylinder(4.0,4,cableHolePos, Base.Vector(0,1,0))
+    case.baseDesign = case.baseDesign.cut(hole)
+    case.show()
+    Part.show(dummy)
+    Gui.SendMsgToActiveView("ViewFit")
+    Gui.activeDocument().activeView().viewAxometric()
 
 def SoundLightPadx():
     proc = PI4Landscape("Pi4",verticalAlignment=VerticalAlignment.TOP, horizontalAlignment=HorizontalAlignment.LEFT,xMargin=0, yMargin=0)
@@ -3447,8 +3712,11 @@ def SoundLightPadx():
     Gui.SendMsgToActiveView("ViewFit")
     Gui.activeDocument().activeView().viewAxometric()
 
-
-#SoundBox()
+SoundBox()
+#SoundBoxSmallscreen()
 #clamp()
-SoundLightPad()
+#SoundLightPad()
 #SoundLightPadControls()
+#SmallSoundLightPadControls()
+#KeyTest()
+#SpeakerBox()

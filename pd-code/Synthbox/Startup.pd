@@ -1,0 +1,28 @@
+#N canvas 247 363 757 569 12;
+#X obj 261 142 SerialComms;
+#X obj 187 144 MIDIComms;
+#X obj 154 9 inlet;
+#X obj 155 50 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 83 201 Display;
+#X obj 35 208 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 25 254 delay 1000 1 msec;
+#X obj 27 307 send randomFill;
+#X obj 192 256 delay 2000 1 msec;
+#X obj 188 307 send fillGreen;
+#X obj 149 172 SoundOutput;
+#X obj 377 146 Controllers;
+#X obj 164 92 trigger b b b b b b;
+#X connect 2 0 3 0;
+#X connect 3 0 12 0;
+#X connect 5 0 6 0;
+#X connect 5 0 8 0;
+#X connect 6 0 7 0;
+#X connect 8 0 9 0;
+#X connect 12 0 5 0;
+#X connect 12 1 4 0;
+#X connect 12 2 10 0;
+#X connect 12 3 1 0;
+#X connect 12 4 0 0;
+#X connect 12 5 11 0;

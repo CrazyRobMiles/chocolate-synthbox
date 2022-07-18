@@ -1,0 +1,17 @@
+#N canvas 232 216 716 300 12;
+#X obj 16 5 inlet;
+#X obj 304 74 receive encoderReceived;
+#X obj 213 132 print;
+#X floatatom 372 171 5 0 0 0 - - -;
+#X obj 370 209 send outputVolume;
+#X obj 304 123 route 1 5;
+#X floatatom 281 177 5 0 0 0 - - -;
+#X obj 159 224 send screenSaverSelect;
+#X obj 16 39 print Controllers starting with a;
+#X connect 0 0 8 0;
+#X connect 1 0 2 0;
+#X connect 1 0 5 0;
+#X connect 3 0 4 0;
+#X connect 5 0 6 0;
+#X connect 5 1 3 0;
+#X connect 6 0 7 0;

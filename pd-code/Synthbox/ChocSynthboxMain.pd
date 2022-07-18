@@ -1,0 +1,47 @@
+#N canvas 94 144 821 381 12;
+#X obj 695 141 loadbang;
+#X obj 695 194 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 695 245 Startup;
+#X obj 606 144 vsl 15 128 0 127 0 0 outputVolume outputVolume Master
+-10 -9 0 10 -258113 -1 -1 7400 1;
+#X obj 30 144 vsl 15 128 0 127 0 0 attack attack Attack -10 -9 0 10
+-4160 -1 -1 2000 1;
+#X obj 72 144 vsl 15 128 0 127 0 0 decay decay Decay -10 -9 0 10 -4160
+-1 -1 2000 1;
+#X obj 143 144 vsl 15 128 0 127 0 0 phase phase Phase -10 -9 0 10 -4160
+-1 -1 8000 1;
+#X obj 110 144 vsl 15 128 0 127 0 0 sine sine Sine -10 -9 0 10 -4160
+-1 -1 8000 1;
+#X obj 190 144 vsl 15 128 0 127 0 0 vol1 vol1 1 5 -9 0 10 -257985 -1
+-1 8000 1;
+#X obj 212 144 vsl 15 128 0 127 0 0 vol2 vol2 2 5 -9 0 10 -257985 -1
+-1 0 1;
+#X obj 234 144 vsl 15 128 0 127 0 0 vol3 vol3 3 5 -9 0 10 -257985 -1
+-1 0 1;
+#X obj 256 144 vsl 15 128 0 127 0 0 vol4 vol4 4 5 -9 0 10 -257985 -1
+-1 0 1;
+#X obj 303 144 vsl 15 128 0 127 0 0 fxm1 fxm1 1 5 -9 0 10 -4034 -1
+-1 8000 1;
+#X obj 325 144 vsl 15 128 0 127 0 0 fxm2 fxm2 2 5 -9 0 10 -4034 -1
+-1 0 1;
+#X obj 347 144 vsl 15 128 0 127 0 0 fxm3 fxm3 3 5 -9 0 10 -4034 -1
+-1 0 1;
+#X obj 369 144 vsl 15 128 0 127 0 0 fxm4 fxm4 4 5 -9 0 10 -4034 -1
+-1 0 1;
+#X obj 413 144 vsl 15 128 0 127 0 0 reverbLevel reverbLevel Level -8
+-9 0 10 -258112 -1 -1 0 1;
+#X obj 443 144 vsl 15 128 0 127 0 0 reverbLiveliness reverbLiveliness
+Live -5 -9 0 10 -258112 -1 -1 10100 1;
+#X obj 471 144 vsl 15 128 0 127 0 0 reverbCrossover reverbCrossover
+Cross -5 -9 0 10 -258112 -1 -1 0 1;
+#X obj 505 144 vsl 15 128 0 127 0 0 reverbDamp reverbDamp Damp -5 -9
+0 10 -258112 -1 -1 0 1;
+#X text 74 86 SYNTH;
+#X text 210 87 LEVELS;
+#X text 302 87 REVERB SEND;
+#X text 442 87 REVERB;
+#X text 29 320 Rob Miles;
+#X text 242 32 CHOCOLATE SYNTHBOX Version 1.2;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
